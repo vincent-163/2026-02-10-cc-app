@@ -91,6 +91,7 @@ fun ChatScreen(
 ) {
     val messages by viewModel.messages.collectAsState()
     val sessionStatus by viewModel.sessionStatus.collectAsState()
+    val isBusy by viewModel.isBusy.collectAsState()
     val isConnected by viewModel.isConnected.collectAsState()
     val modelName by viewModel.modelName.collectAsState()
     val totalCost by viewModel.totalCost.collectAsState()
@@ -118,15 +119,15 @@ fun ChatScreen(
                                 Icons.Default.Circle,
                                 contentDescription = null,
                                 modifier = Modifier.size(8.dp),
-                                tint = when (sessionStatus) {
-                                    "ready", "connected" -> AccentGreen
-                                    "busy" -> AccentOrange
+                                tint = when {
+                                    isBusy -> AccentOrange
+                                    sessionStatus in listOf("ready", "connected", "running") -> AccentGreen
                                     else -> AccentRed
                                 }
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                sessionStatus,
+                                if (isBusy) "busy" else sessionStatus,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = TextSecondary
                             )
@@ -146,7 +147,7 @@ fun ChatScreen(
                     }
                 },
                 actions = {
-                    if (sessionStatus == "busy") {
+                    if (isBusy) {
                         IconButton(onClick = { viewModel.sendInterrupt() }) {
                             Icon(
                                 Icons.Default.Stop,
@@ -197,7 +198,7 @@ fun ChatScreen(
                     value = inputText,
                     onValueChange = { inputText = it },
                     placeholder = {
-                        Text(if (sessionStatus == "busy") "Claude is working..." else "Message Claude Code...")
+                        Text(if (isBusy) "Claude is working..." else "Message Claude Code...")
                     },
                     modifier = Modifier.weight(1f),
                     maxLines = 4,
@@ -207,7 +208,7 @@ fun ChatScreen(
                     )
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                if (sessionStatus == "busy") {
+                if (isBusy) {
                     IconButton(
                         onClick = { viewModel.sendInterrupt() },
                         enabled = isConnected

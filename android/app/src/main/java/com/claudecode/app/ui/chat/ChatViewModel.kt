@@ -27,6 +27,10 @@ class ChatViewModel(
     private val _sessionStatus = MutableStateFlow("connecting")
     val sessionStatus: StateFlow<String> = _sessionStatus.asStateFlow()
 
+    // Client-side busy tracking: true from user message send until Result event
+    private val _isBusy = MutableStateFlow(false)
+    val isBusy: StateFlow<Boolean> = _isBusy.asStateFlow()
+
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
 
@@ -98,6 +102,7 @@ class ChatViewModel(
                 )
             }
             is SseEvent.AssistantMessage -> {
+                _isBusy.value = true
                 messages.add(
                     ChatMessage.AssistantMessage(
                         content = event.content,
@@ -106,6 +111,7 @@ class ChatViewModel(
                 )
             }
             is SseEvent.Result -> {
+                _isBusy.value = false
                 event.totalCostUsd?.let { _totalCost.value = it }
                 if (event.resultText.isNotBlank()) {
                     messages.add(
@@ -168,6 +174,7 @@ class ChatViewModel(
             is SseEvent.Exit -> {
                 messages.add(ChatMessage.ExitMessage(exitCode = event.code))
                 _sessionStatus.value = "exited"
+                _isBusy.value = false
             }
             is SseEvent.Error -> {
                 messages.add(ChatMessage.ErrorMessage(content = event.message))
@@ -195,6 +202,7 @@ class ChatViewModel(
                     is SseEvent.Disconnected -> {
                         _isConnected.value = false
                         _sessionStatus.value = "disconnected"
+                        _isBusy.value = false
                     }
 
                     is SseEvent.Ping -> { /* keepalive */ }
@@ -228,6 +236,7 @@ class ChatViewModel(
         if (content.isBlank()) return
         localUserMessages.add(content)
         addMessage(ChatMessage.UserMessage(content = content))
+        _isBusy.value = true
         viewModelScope.launch {
             apiClient.sendInput(sessionId, "user_message", content).fold(
                 onSuccess = { /* sent */ },

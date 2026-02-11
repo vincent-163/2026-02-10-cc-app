@@ -116,14 +116,29 @@ class ChatViewModel(
                 }
             }
             is SseEvent.UserMessage -> {
-                if (!event.isToolResult) {
+                if (event.isToolResult) {
+                    // Attach tool result to the matching ToolUse block in the last AssistantMessage
+                    val toolUseId = event.toolUseId ?: ""
+                    val toolResult = ContentBlock.ToolResult(
+                        toolUseId = toolUseId,
+                        content = event.content,
+                        isError = event.isError
+                    )
+                    val idx = messages.indexOfLast { msg ->
+                        msg is ChatMessage.AssistantMessage &&
+                            msg.content.any { it is ContentBlock.ToolUse && it.id == toolUseId }
+                    }
+                    if (idx >= 0) {
+                        val assistantMsg = messages[idx] as ChatMessage.AssistantMessage
+                        messages[idx] = assistantMsg.copy(content = assistantMsg.content + toolResult)
+                    }
+                } else {
                     // Regular user message from history - deduplicate
                     val content = event.content
                     if (!localUserMessages.contains(content)) {
                         messages.add(ChatMessage.UserMessage(content = content))
                     }
                 }
-                // Tool results are tool output - skip
             }
             is SseEvent.ControlRequest -> {
                 messages.add(

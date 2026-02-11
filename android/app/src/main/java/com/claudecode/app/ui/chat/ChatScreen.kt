@@ -294,6 +294,7 @@ private fun AssistantMessageBlock(message: ChatMessage.AssistantMessage) {
             when (block) {
                 is ContentBlock.Text -> block.text
                 is ContentBlock.ToolUse -> "[${block.name}] " + block.input.entries.joinToString(", ") { (k, v) -> "$k: $v" }
+                is ContentBlock.ToolResult -> block.content
             }
         }
     }
@@ -381,6 +382,58 @@ private fun AssistantMessageBlock(message: ChatMessage.AssistantMessage) {
                                         fontSize = 12.sp,
                                         color = TextSecondary,
                                         maxLines = 3
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                is ContentBlock.ToolResult -> {
+                    var expanded by remember { mutableStateOf(false) }
+                    val isLong = block.content.length > 200 || block.content.count { it == '\n' } > 5
+                    val resultColor = if (block.isError) AccentRed else AccentGreen
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(resultColor.copy(alpha = 0.08f))
+                            .then(if (isLong) Modifier.clickable { expanded = !expanded } else Modifier)
+                            .animateContentSize()
+                            .padding(10.dp)
+                    ) {
+                        Column {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    if (block.isError) "✗ Error" else "✓ Result",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = resultColor
+                                )
+                                if (isLong) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        if (expanded) "▲" else "▼",
+                                        fontSize = 10.sp,
+                                        color = TextMuted
+                                    )
+                                }
+                            }
+                            if (block.content.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                if (expanded || !isLong) {
+                                    Text(
+                                        block.content,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TextSecondary
+                                    )
+                                } else {
+                                    Text(
+                                        block.content,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TextSecondary,
+                                        maxLines = 5
                                     )
                                 }
                             }

@@ -73,4 +73,9 @@ sealed class ContentBlock {
         val name: String,
         val input: Map<String, Any>
     ) : ContentBlock()
+    data class ToolResult(
+        val toolUseId: String,
+        val content: String,
+        val isError: Boolean = false
+    ) : ContentBlock()
 }

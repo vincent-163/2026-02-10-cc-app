@@ -70,7 +70,7 @@ sess.json                    # Example session JSON dump for reference
 ## Workflow
 
 Always commit and push after every change.
-Always attempt a build (`cd android && ./gradlew assembleDebug`) after modifying Android app code, and fix any errors before committing.
+After committing and pushing, if Android app code was modified, attempt a build (`cd android && ./gradlew assembleDebug`). If the build fails, fix the errors, then commit and push again.
 
 ## Build
 

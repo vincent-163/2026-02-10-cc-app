@@ -3,6 +3,7 @@ package com.claudecode.app.ui.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.claudecode.app.data.model.ChatMessage
+import com.claudecode.app.data.model.ContentBlock
 import com.claudecode.app.network.ApiClient
 import com.claudecode.app.network.SseClient
 import com.claudecode.app.network.SseEvent
@@ -130,7 +131,7 @@ class ChatViewModel(
                     }
                     if (idx >= 0) {
                         val assistantMsg = messages[idx] as ChatMessage.AssistantMessage
-                        messages[idx] = assistantMsg.copy(content = assistantMsg.content + toolResult)
+                        messages[idx] = assistantMsg.copy(content = assistantMsg.content + listOf(toolResult))
                     }
                 } else {
                     // Regular user message from history - deduplicate

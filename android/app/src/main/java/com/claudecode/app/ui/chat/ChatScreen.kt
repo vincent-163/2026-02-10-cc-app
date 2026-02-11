@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -324,11 +326,14 @@ private fun AssistantMessageBlock(message: ChatMessage.AssistantMessage) {
                     }
                 }
                 is ContentBlock.ToolUse -> {
+                    var expanded by remember { mutableStateOf(false) }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .background(CodeBackground)
+                            .clickable { expanded = !expanded }
+                            .animateContentSize()
                             .padding(10.dp)
                     ) {
                         Column {
@@ -346,20 +351,38 @@ private fun AssistantMessageBlock(message: ChatMessage.AssistantMessage) {
                                     fontWeight = FontWeight.Bold,
                                     color = AccentPurple
                                 )
+                                Spacer(modifier = Modifier.weight(1f))
+                                Text(
+                                    if (expanded) "▲" else "▼",
+                                    fontSize = 10.sp,
+                                    color = TextMuted
+                                )
                             }
                             if (block.input.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
-                                val inputPreview = block.input.entries.joinToString(", ") { (k, v) ->
-                                    val valueStr = v.toString()
-                                    "$k: ${if (valueStr.length > 60) valueStr.take(60) + "..." else valueStr}"
+                                if (expanded) {
+                                    val fullInput = block.input.entries.joinToString("\n") { (k, v) ->
+                                        "$k: ${v.toString()}"
+                                    }
+                                    Text(
+                                        fullInput,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TextSecondary
+                                    )
+                                } else {
+                                    val inputPreview = block.input.entries.joinToString(", ") { (k, v) ->
+                                        val valueStr = v.toString()
+                                        "$k: ${if (valueStr.length > 60) valueStr.take(60) + "..." else valueStr}"
+                                    }
+                                    Text(
+                                        inputPreview,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontSize = 12.sp,
+                                        color = TextSecondary,
+                                        maxLines = 3
+                                    )
                                 }
-                                Text(
-                                    inputPreview,
-                                    fontFamily = FontFamily.Monospace,
-                                    fontSize = 12.sp,
-                                    color = TextSecondary,
-                                    maxLines = 3
-                                )
                             }
                         }
                     }
@@ -371,19 +394,37 @@ private fun AssistantMessageBlock(message: ChatMessage.AssistantMessage) {
 
 @Composable
 private fun ResultMessageBlock(message: ChatMessage.ResultMessage) {
+    var expanded by remember { mutableStateOf(false) }
+    val isLong = message.resultText.length > 200 || message.resultText.count { it == '\n' } > 5
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(AccentGreen.copy(alpha = 0.08f))
+            .then(if (isLong) Modifier.clickable { expanded = !expanded } else Modifier)
+            .animateContentSize()
             .padding(10.dp)
     ) {
         if (message.resultText.isNotBlank()) {
-            Text(
-                message.resultText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            if (expanded || !isLong) {
+                Text(
+                    message.resultText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            } else {
+                Text(
+                    message.resultText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 5
+                )
+                Text(
+                    "Tap to show more...",
+                    fontSize = 11.sp,
+                    color = TextMuted
+                )
+            }
         }
         message.totalCostUsd?.let { cost ->
             Spacer(modifier = Modifier.height(4.dp))
@@ -470,12 +511,14 @@ private fun ExitMessageBlock(message: ChatMessage.ExitMessage) {
 private fun ToolApprovalBlock(message: ChatMessage.ControlRequest, viewModel: ChatViewModel) {
     val pendingResponses by viewModel.pendingControlResponses.collectAsState()
     val isPending = pendingResponses.contains(message.requestId)
+    var expanded by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(AccentOrange.copy(alpha = 0.12f))
+            .animateContentSize()
             .padding(12.dp)
     ) {
         Column {
@@ -503,17 +546,50 @@ private fun ToolApprovalBlock(message: ChatMessage.ControlRequest, viewModel: Ch
             )
             if (message.toolInput.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(4.dp))
-                val inputPreview = message.toolInput.entries.joinToString(", ") { (k, v) ->
-                    val valueStr = v.toString()
-                    "$k: ${if (valueStr.length > 80) valueStr.take(80) + "..." else valueStr}"
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(CodeBackground)
+                        .clickable { expanded = !expanded }
+                        .padding(8.dp)
+                ) {
+                    Column {
+                        if (expanded) {
+                            val fullInput = message.toolInput.entries.joinToString("\n") { (k, v) ->
+                                "$k: ${v.toString()}"
+                            }
+                            Text(
+                                fullInput,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        } else {
+                            val inputPreview = message.toolInput.entries.joinToString(", ") { (k, v) ->
+                                val valueStr = v.toString()
+                                "$k: ${if (valueStr.length > 80) valueStr.take(80) + "..." else valueStr}"
+                            }
+                            Text(
+                                inputPreview,
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                maxLines = 4
+                            )
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            Text(
+                                if (expanded) "▲ Less" else "▼ Details",
+                                fontSize = 11.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
                 }
-                Text(
-                    inputPreview,
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    color = TextSecondary,
-                    maxLines = 4
-                )
             }
             Spacer(modifier = Modifier.height(10.dp))
             when {

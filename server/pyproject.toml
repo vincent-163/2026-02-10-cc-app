@@ -1,0 +1,13 @@
+[project]
+name = "cc-server"
+version = "0.1.0"
+description = "Server for managing Claude Code CLI instances"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "websockets>=14.0",
+]
+
+[project.scripts]
+cc-server = "cc_server.main:run"

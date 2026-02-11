@@ -622,12 +622,28 @@ export class SessionManager {
       // Check if it exists on disk
       const jsonlPath = path.join(this.sessionsDir, `${id}.jsonl`);
       if (fs.existsSync(jsonlPath)) {
-        // Session exists on disk but not in memory — nothing to kill
+        // Session exists on disk but not in memory — delete the file permanently
+        try {
+          fs.unlinkSync(jsonlPath);
+          logger.info(`Permanently deleted session file for ${id}`);
+        } catch (err) {
+          logger.warn(`Failed to delete session file for ${id}: ${err}`);
+        }
         return;
       }
       throw new Error('Session not found');
     }
     await session.destroy();
+    this.sessions.delete(id);
+
+    // Delete the JSONL file so the session doesn't reappear in listings
+    const jsonlPath = path.join(this.sessionsDir, `${id}.jsonl`);
+    try {
+      fs.unlinkSync(jsonlPath);
+      logger.info(`Permanently deleted session file for ${id}`);
+    } catch (err) {
+      logger.warn(`Failed to delete session file for ${id}: ${err}`);
+    }
   }
 
   async destroyAll(): Promise<void> {

@@ -434,7 +434,7 @@ export class SessionManager {
     try {
       fs.appendFileSync(jsonlPath, JSON.stringify({
         id: 0, event: 'meta', timestamp: Date.now() / 1000,
-        data: { working_directory: cwd, model: opts.model, resume_conversation_id: opts.resumeConversationId },
+        data: { working_directory: cwd, model: opts.model, resume_conversation_id: opts.resumeConversationId, additional_flags: opts.additionalFlags },
       }) + '\n');
     } catch (err) {
       logger.warn(`Failed to write meta to ${jsonlPath}: ${err}`);
@@ -529,14 +529,20 @@ export class SessionManager {
       throw new Error(`No CLI session_id found in history for session ${sessionId}`);
     }
 
-    // Read working_directory from the meta line
+    // Read working_directory and additional_flags from the meta line
     let workingDirectory = opts?.workingDirectory || process.cwd();
+    let storedFlags: string[] | undefined;
     try {
       const firstLine = fs.readFileSync(jsonlPath, 'utf-8').split('\n')[0];
       if (firstLine) {
         const metaEvt = JSON.parse(firstLine);
-        if (metaEvt.event === 'meta' && metaEvt.data?.working_directory) {
-          workingDirectory = metaEvt.data.working_directory;
+        if (metaEvt.event === 'meta') {
+          if (metaEvt.data?.working_directory) {
+            workingDirectory = metaEvt.data.working_directory;
+          }
+          if (Array.isArray(metaEvt.data?.additional_flags)) {
+            storedFlags = metaEvt.data.additional_flags;
+          }
         }
       }
     } catch {
@@ -580,8 +586,9 @@ export class SessionManager {
     if (opts?.permissionMode) {
       args.push('--permission-mode', opts.permissionMode);
     }
-    if (opts?.additionalFlags) {
-      args.push(...opts.additionalFlags);
+    const flagsToApply = opts?.additionalFlags || storedFlags;
+    if (flagsToApply) {
+      args.push(...flagsToApply);
     }
 
     logger.info(`Spawning resumed session ${sessionId}: ${this.config.claudeCmd} ${args.join(' ')} (cwd=${workingDirectory})`);

@@ -1,0 +1,38 @@
+# Environment / secrets
+.env
+.env.*
+
+# Node
+server/node_modules/
+server/dist/
+server/public/
+
+# Web
+web/node_modules/
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Session logs / data
+server/sessions/
+sess.json
+
+# Claude
+.claude/
+
+# Output
+output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Misc
+server/hello.txt

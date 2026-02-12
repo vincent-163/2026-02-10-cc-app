@@ -25,6 +25,14 @@ app.use('/sessions', authMiddleware(config));
 // Mount routes
 app.use(createRoutes(manager));
 
+// Serve web frontend static files (built by web/ project into server/public/)
+const publicDir = path.join(__dirname, '..', 'public');
+app.use(express.static(publicDir));
+// SPA fallback: serve index.html for non-API routes
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
 // Graceful shutdown
 async function shutdown(signal: string) {
   logger.info(`Received ${signal}, shutting down...`);

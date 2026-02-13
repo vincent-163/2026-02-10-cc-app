@@ -90,6 +90,13 @@ export interface UserMessage {
   content: string;
 }
 
+export interface ToolResultEvent {
+  kind: 'tool_result_event';
+  tool_use_id: string;
+  content: string;
+  is_error: boolean;
+}
+
 export type ChatMessage =
   | SystemMessage
   | AssistantMessage
@@ -99,7 +106,8 @@ export type ChatMessage =
   | ExitMessage
   | ControlRequestMessage
   | ControlResponseMessage
-  | UserMessage;
+  | UserMessage
+  | ToolResultEvent;
 
 // --- SSE ---
 

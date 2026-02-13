@@ -1,10 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
-import type { Settings, ChatMessage, SessionStatus } from '../lib/types'
+import type { Settings, ChatMessage, SessionStatus, ContentBlock } from '../lib/types'
 import * as api from '../lib/api'
 import { connectSse } from '../lib/sse'
 import { parseEvent } from '../lib/parse'
 import AnsiText from './AnsiText'
+
+/** Append a tool_result content block to the assistant message that contains the matching tool_use. */
+function pairToolResult(msgs: ChatMessage[], toolUseId: string, content: string, isError: boolean): ChatMessage[] {
+  const result: ContentBlock = { type: 'tool_result', tool_use_id: toolUseId, content, is_error: isError }
+  const idx = msgs.findLastIndex((m) =>
+    m.kind === 'assistant' && m.content.some((b) => b.type === 'tool_use' && b.id === toolUseId)
+  )
+  if (idx < 0) return msgs // no matching assistant message found
+  const updated = [...msgs]
+  const assistant = updated[idx] as ChatMessage & { kind: 'assistant' }
+  updated[idx] = { ...assistant, content: [...assistant.content, result] }
+  return updated
+}
 
 interface Props {
   settings: Settings
@@ -53,6 +66,8 @@ export default function ChatPage({ settings, onBack }: Props) {
               setCost(msg.total_cost_usd)
             } else if (msg.kind === 'control_response') {
               historyResolved.set(msg.request_id, msg.approved)
+            } else if (msg.kind === 'tool_result_event') {
+              historyMsgs.splice(0, historyMsgs.length, ...pairToolResult(historyMsgs, msg.tool_use_id, msg.content, msg.is_error))
             } else {
               historyMsgs.push(msg)
             }
@@ -87,6 +102,9 @@ export default function ChatPage({ settings, onBack }: Props) {
           }
           // For assistant messages: replace last if streaming, else append
           setMessages((prev) => {
+            if (msg.kind === 'tool_result_event') {
+              return pairToolResult(prev, msg.tool_use_id, msg.content, msg.is_error)
+            }
             if (msg.kind === 'assistant') {
               const last = prev[prev.length - 1]
               if (last?.kind === 'assistant' && last.streaming) {

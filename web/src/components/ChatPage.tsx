@@ -9,10 +9,15 @@ import AnsiText from './AnsiText'
 /** Append a tool_result content block to the assistant message that contains the matching tool_use. */
 function pairToolResult(msgs: ChatMessage[], toolUseId: string, content: string, isError: boolean): ChatMessage[] {
   const result: ContentBlock = { type: 'tool_result', tool_use_id: toolUseId, content, is_error: isError }
-  const idx = msgs.findLastIndex((m) =>
-    m.kind === 'assistant' && m.content.some((b) => b.type === 'tool_use' && b.id === toolUseId)
-  )
-  if (idx < 0) return msgs // no matching assistant message found
+  let idx = -1
+  for (let i = msgs.length - 1; i >= 0; i--) {
+    const m = msgs[i]
+    if (m.kind === 'assistant' && m.content.some((b: ContentBlock) => b.type === 'tool_use' && b.id === toolUseId)) {
+      idx = i
+      break
+    }
+  }
+  if (idx < 0) return msgs
   const updated = [...msgs]
   const assistant = updated[idx] as ChatMessage & { kind: 'assistant' }
   updated[idx] = { ...assistant, content: [...assistant.content, result] }
